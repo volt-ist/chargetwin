@@ -1,422 +1,181 @@
-## Roadmap Principles
+# ChargeTwin — Roadmap
 
-- ship a usable simulator early
-- keep the protocol roadmap explicit
-- prioritize real operational test value
-- build scale and orchestration into the platform from the start
-- avoid shallow checkbox support; prefer solid, testable implementation
+The roadmap is organised around two axes: **OCPP profile coverage** and **platform capabilities**. Each milestone ships a complete, usable increment — not a partial implementation of everything.
+
+Milestones are not date-bound at this stage. They are sequenced by dependency and value.
 
 ---
 
-## Versioning Strategy
+## v0.1 — Foundations
 
-Recommended versioning model:
+**Goal:** A working single charge point simulator that speaks OCPP 1.6J Core profile end-to-end. Useful to a developer who wants to test a CSMS against a basic charger today.
 
-- `0.x` while platform and major feature coverage are still evolving
-- `1.0.0` once OCPP 1.6 baseline support is stable, documented, and production-usable
-- minor versions for feature/profile expansion
-- patch versions for fixes and compatibility improvements
+**OCPP 1.6J:**
+- [ ] Core profile — full message set
+    - BootNotification / Heartbeat
+    - Authorize
+    - StartTransaction / StopTransaction
+    - MeterValues (basic)
+    - StatusNotification
+    - ChangeAvailability, ChangeConfiguration, GetConfiguration
+    - Reset, UnlockConnector
 
----
+**Platform:**
+- [ ] Single charge point CLI (`chargetwin start --csms ... --id ...`)
+- [ ] WebSocket transport (OCPP-J)
+- [ ] Typed OCPP 1.6 message schema (Serde, validated on decode)
+- [ ] Structured JSON logging (`tracing`)
+- [ ] Minimal configuration via YAML file or CLI flags
+- [ ] GitHub Actions CI (build + test)
 
-## Phase 0 — Foundation
-
-### Target
-Create the technical base for local development and orchestrated execution.
-
-### Scope
-- monorepo structure
-- Rust workspace
-- Go service scaffolding
-- React Studio scaffolding
-- local Docker Compose
-- PostgreSQL and NATS integration
-- schema definitions
-- observability baseline
-- CI pipelines
-- simple single-instance runtime
-
-### Deliverables
-- repo and folder structure finalized
-- local dependency stack
-- first runnable simulator shell
-- first instance visible in CLI/logs/UI
-- baseline docs
-
-### Exit Criteria
-- a developer can run one simulated charger locally
-- runtime and control plane communicate
-- instance lifecycle is visible end-to-end
-
-### Suggested Release
-- `0.1.0`
+**Not in scope:** GUI, orchestration, scenarios, fleet mode.
 
 ---
 
-## Phase 1 — Local Simulator MVP
+## v0.2 — Local dev experience
 
-### Target
-Turn the platform into a real developer tool before scaling it.
+**Goal:** A developer can open a browser, see their simulated charge point's live state, send commands, and inspect every OCPP message. The local GUI is production-quality from day one.
 
-### Scope
-- CLI commands for local run
-- basic Studio screens
-- template loading
-- scenario loading
-- transport connection handling
-- protocol trace logging
-- deterministic clock/test hooks
+**OCPP 1.6J:**
+- [ ] Firmware Management profile
+    - UpdateFirmware, FirmwareStatusNotification
+- [ ] Remote Trigger profile
+    - TriggerMessage (all triggerable messages)
+- [ ] Local Auth List Management profile
+    - SendLocalList, GetLocalListVersion
 
-### Deliverables
-- usable local single-instance flow
-- basic multi-connector model
-- scenario runner MVP
-- protocol trace inspector MVP
-
-### Exit Criteria
-- a developer can run and inspect a realistic local simulator session
-- scenarios can alter charger behavior
-- logs and traces are usable for debugging
-
-### Suggested Release
-- `0.2.0`
+**Platform:**
+- [ ] Local HTTP/WebSocket server (Axum)
+- [ ] REST API for instance management
+- [ ] WebSocket event stream (per-instance)
+- [ ] React/TypeScript GUI (Vite)
+    - Instance status panel (availability, connector, session)
+    - Full OCPP message trace (sent/received, timestamps, raw JSON)
+    - Basic command panel (Authorize, Reset, UnlockConnector)
+- [ ] GUI served as static assets by the local binary
+- [ ] Prometheus `/metrics` endpoint (per-instance counters)
 
 ---
 
-## Phase 2 — Multi-Instance Runtime and Control Plane
+## v0.3 — Scenarios + Smart Charging
 
-### Target
-Enable large-scale concurrent simulation under orchestration.
+**Goal:** Scenarios can be scripted in YAML and run headlessly. Smart Charging makes the simulator useful for CSMS teams building load management features.
 
-### Scope
-- worker runtime hosting many instances
-- control plane APIs
-- scheduler service
-- worker registration and health
-- instance placement
-- telemetry/event streaming
-- run tracking
+**OCPP 1.6J:**
+- [ ] Smart Charging profile
+    - SetChargingProfile, ClearChargingProfile, GetCompositeSchedule
+    - Charging schedule enforcement in the simulated session
 
-### Deliverables
-- one worker can host many instances
-- control plane can create/start/stop/update instances
-- scheduler can assign workloads
-- fleet state visible in Studio
-
-### Exit Criteria
-- multi-instance orchestration is stable
-- instance density is practical
-- control flows work via API, not only local CLI
-
-### Suggested Release
-- `0.3.0`
+**Platform:**
+- [ ] Scenario DSL (YAML) — first version
+    - Actions: `connect`, `boot`, `authorize`, `start_transaction`, `stop_transaction`, `meter_values`, `wait`, `disconnect`
+    - Assertions: `assert` on metrics and state
+    - Fault injection: `fault` (disconnect, delay, malformed message)
+- [ ] Scenario executor integrated with charge point core
+- [ ] Scenario result output: structured JSON (pass/fail, step-by-step)
+- [ ] `chargetwin run --scenario ./scenarios/basic-session.yaml` command
+- [ ] Bundled example scenarios
 
 ---
 
-# OCPP 1.6J Delivery Plan
+## v0.4 — Fleet mode
 
-The core protocol plan is intentionally staged.
+**Goal:** Hundreds of charge point instances can be spawned from a single command and driven by scenarios. The orchestrator is operational.
 
-## Feature Groups in Scope
-
-- Core
-- Firmware Management
-- Local Auth List Management
-- Reservation
-- Smart Charging
-- Remote Trigger
-
-These are planned in dependency order and in a way that maximizes product usefulness.
-
----
-
-## Phase 3 — OCPP 1.6 Core
-
-### Why first
-This is the foundation of everything else.
-
-Without a solid Core implementation, advanced feature groups become fragile and less valuable.
-
-### Functional Scope
-- BootNotification
-- Heartbeat
-- StatusNotification
-- Authorize
-- StartTransaction
-- StopTransaction
-- MeterValues
-- ChangeAvailability
-- Reset
-- diagnostics-friendly status flows
-- single and multi-connector support
-- online/offline transitions
-- fault states and basic recovery behavior
-
-### Platform Scope
-- Core capability matrix
-- per-instance config
-- basic assertions and fixtures
-- interoperability smoke test scenarios
-
-### Testing Scope
-- unit coverage for state handling
-- integration coverage for message flows
-- scenario reproducibility
-- CSMS interoperability smoke tests
-
-### Exit Criteria
-- stable local and orchestrated Core simulation
-- clear message trace visibility
-- repeatable test scenarios in CI
-- compatibility matrix published
-
-### Suggested Release
-- `0.4.0`
+**Platform:**
+- [ ] Orchestrator (in-process, same binary)
+    - Instance pool (Tokio tasks, concurrency-safe registry)
+    - Bulk instance create/start/stop
+    - Per-instance scenario assignment
+    - Fleet-level metrics aggregation
+- [ ] Fleet CLI (`chargetwin orchestrate --count N --scenario ...`)
+- [ ] WebSocket fleet event stream (`/api/events`)
+- [ ] GUI fleet dashboard
+    - Instance list with live status
+    - Fleet-level metrics (active sessions, messages/sec, error rate)
+    - Scenario run status per instance
+- [ ] Docker image
+- [ ] Docker Compose stack (chargetwin + Prometheus + Grafana)
+- [ ] Bundled Grafana dashboards
 
 ---
 
-## Phase 4 — Firmware Management + Remote Trigger
+## v0.5 — OCPP 2.0.1 foundation
 
-These two features are grouped together because they provide immediate operational value and are relatively self-contained once Core is stable.
+**Goal:** The same developer and fleet experience is available for OCPP 2.0.1, starting with the most operationally important profiles.
 
-### Firmware Management Scope
-- UpdateFirmware
-- firmware state transitions
-- download/install/reboot simulation hooks
-- success/failure paths
-- timeout and invalid package scenarios
-- version/reporting state exposure
-- scenario-driven staged firmware behavior
+**OCPP 2.0.1:**
+- [ ] Core / Provisioning
+- [ ] Authorization
+- [ ] Transactions
+- [ ] Firmware Management
+- [ ] Remote Trigger
+- [ ] Device Model (partial)
+- [ ] Smart Charging (partial)
 
-### Remote Trigger Scope
-- TriggerMessage support for supported message types
-- configurable acceptance/rejection behavior
-- trigger-induced message timing behavior
-- negative-path and unsupported-trigger scenarios
-
-### Platform Scope
-- firmware state view in Studio
-- artifact/config model for firmware packages
-- scenario packs for update flows
-- trigger action panel in GUI/API
-
-### Testing Scope
-- firmware happy path
-- firmware failure path
-- reboot/reconnect behaviors
-- supported/unsupported trigger cases
-- concurrency tests under many instances
-
-### Exit Criteria
-- firmware flows are realistic enough for backend testing
-- remote triggers are visible, controllable, and testable
-- negative paths are covered
-
-### Suggested Release
-- `0.5.0`
+**Platform:**
+- [ ] `--ocpp 2.0.1` flag wires up the 2.0.1 OCPP adapter
+- [ ] Scenario DSL extended for 2.0.1 action types
+- [ ] OCPP version shown in GUI instance panel
 
 ---
 
-## Phase 5 — Local Auth List Management + Reservation
+## v0.6 — Observability + security
 
-These features deepen operational realism and offline/field-behavior testing.
+**Goal:** ChargeTwin is production-ready for continuous integration environments. Security extensions are implemented. Traces make it easy to debug CSMS behaviour against the simulator.
 
-### Local Auth List Management Scope
-- SendLocalList
-- local list versioning
-- full and differential updates
-- local authorization cache behavior
-- list acceptance/rejection
-- out-of-order / stale update handling
-- offline/local-auth scenarios
-- config hooks for local list enforcement behavior
+**OCPP 1.6J + 2.0.1:**
+- [ ] Security extensions (1.6 Security Whitepaper)
+    - TLS for WebSocket connections
+    - Certificate-based authentication
+    - SecurityEventNotification
 
-### Reservation Scope
-- ReserveNow
-- CancelReservation
-- reservation state model
-- reservation timeout/expiry
-- reservation-to-session transitions
-- conflicts and invalid reservation scenarios
-- connector-specific reservation behavior
-
-### Platform Scope
-- local auth list state inspection
-- reservation state view in GUI
-- scenario packs for offline auth and reserved-connector use cases
-- audit visibility for list version changes
-
-### Testing Scope
-- full vs differential list update cases
-- stale version rejection
-- offline auth fallback behavior
-- reservation conflict/expiry cases
-- mixed connector state behavior
-
-### Exit Criteria
-- local auth list behavior is reproducible and inspectable
-- reservation flows are testable at scale
-- backend behavior under edge conditions is observable
-
-### Suggested Release
-- `0.6.0`
+**Platform:**
+- [ ] OpenTelemetry trace export (spans per OCPP call)
+- [ ] Helm chart for Kubernetes deployment (fleet mode)
+- [ ] Scenario `repeat`, `sequence`, and sub-scenario composition
+- [ ] `chargetwin events --follow` formatted CLI output
+- [ ] Scenario library expanded (offline recovery, auth failure loop, firmware update cycle)
 
 ---
 
-## Phase 6 — Smart Charging
+## v1.0 — Production milestone
 
-### Why later
-Smart Charging depends on a strong charger/session model and benefits from established runtime, scenario, and observability infrastructure.
+**Goal:** ChargeTwin is feature-complete for OCPP 1.6J and 2.0.1, robustly tested, and suitable as a primary testing tool for CSMS teams.
 
-### Functional Scope
-- SetChargingProfile
-- ClearChargingProfile
-- charging profile precedence
-- stack level handling
-- connector and station-wide limits
-- schedule application
-- profile conflicts and expiry handling
-- realistic current/power enforcement in meter simulation
-- dynamic schedule updates during charging
+**OCPP 2.0.1:**
+- [ ] Full profile coverage (Reservation, Display, DataTransfer, Local Auth List)
+- [ ] ISO 15118 / Plug & Charge (basic)
 
-### Digital Twin Scope
-- configurable power envelopes
-- site constraints
-- simulated throttling and load conditions
-- profile-aware session behavior
+**OCPP 2.1:**
+- [ ] Core / Provisioning
+- [ ] Transactions
+- [ ] V2G / bidirectional charging (initial)
 
-### Platform Scope
-- charging profile editor/viewer
-- timeline visualization
-- schedule assertions
-- scenario packs for dynamic load management tests
-
-### Testing Scope
-- precedence correctness
-- schedule application correctness
-- long-running schedule transitions
-- load/concurrency tests with many profile updates
-
-### Exit Criteria
-- applied limits visibly affect simulated charging behavior
-- schedule changes are testable and deterministic
-- orchestration handles large fleets with profile changes
-
-### Suggested Release
-- `0.7.0`
+**Platform:**
+- [ ] OCPP conformance test runner (OCTT-compatible assertions)
+- [ ] Plugin interface for custom charge point behaviours (Rust trait, dynamically loaded)
+- [ ] Optional Tauri packaging for desktop distribution
+- [ ] Stable REST API (v1 contract, changelog-tracked)
+- [ ] Comprehensive documentation site
 
 ---
 
-## Phase 7 — Stabilization for 1.0
+## Beyond v1.0
 
-### Target
-Harden the platform into a reliable product baseline.
+Ideas tracked but not scheduled:
 
-### Scope
-- API stabilization
-- RBAC / multi-tenancy
-- packaging and installers
-- performance tuning
-- scale benchmarking
-- observability dashboards
-- artifact retention
-- full compatibility matrix
-- docs completion
-- release automation hardening
-
-### Exit Criteria
-- OCPP 1.6 baseline support is well documented
-- platform is operationally stable
-- releases are repeatable
-- scale characteristics are understood
-- major workflows are polished
-
-### Suggested Release
-- `1.0.0`
+- **Cloud-hosted fleet runner** — run fleet scenarios against a CSMS without local infrastructure
+- **SaaS conformance testing** — submit a CSMS endpoint, receive a full OCPP conformance report
+- **OCPP message fuzzer** — systematic mutation of message fields for robustness testing
+- **CSMS stub** — a minimal built-in CSMS for fully self-contained local testing
+- **gRPC / NATS orchestration interface** — extract the orchestrator into a separate service for large-scale lab deployments
 
 ---
 
-## Milestone Summary
+## Principles that don't change
 
-| Version | Focus | Outcome |
-|---|---|---|
-| 0.1.0 | Foundation | Repo, stack, local environment, first runnable shell |
-| 0.2.0 | Local MVP | Local CLI/GUI simulator and scenario MVP |
-| 0.3.0 | Scale MVP | Multi-instance worker, control plane, scheduler |
-| 0.4.0 | OCPP 1.6 Core | Stable Core support |
-| 0.5.0 | Firmware + Remote Trigger | Operational flows and control actions |
-| 0.6.0 | Local Auth + Reservation | Offline realism and reservation handling |
-| 0.7.0 | Smart Charging | Charging profile and load-control behavior |
-| 1.0.0 | Production Baseline | Stable, documented, scalable OCPP 1.6 platform |
-
----
-
-## Cross-Cutting Engineering Tracks
-
-### Track A — Simulation Correctness
-Focus on:
-- charger state machine correctness
-- connector/session lifecycle
-- timing model
-- meter behavior
-- fault transitions
-
-### Track B — Protocol Support
-Focus on:
-- message handling
-- feature gating
-- compatibility matrix
-- conformance and interoperability tests
-
-### Track C — Runtime and Scale
-Focus on:
-- worker density
-- connection handling
-- scheduler placement
-- memory/cpu efficiency
-- fleet observability
-
-### Track D — Product Experience
-Focus on:
-- Studio usability
-- scenario editing
-- trace inspection
-- operator workflows
-- debugging tools
-
-### Track E — Release Engineering
-Focus on:
-- CI/CD
-- container builds
-- automated smoke tests
-- packaging
-- versioning and changelogs
-
----
-
-## Definition of Done
-
-A feature is considered done when:
-
-- implementation is complete
-- unit and integration tests exist
-- protocol traces are visible
-- docs are updated
-- scenarios/examples exist where relevant
-- compatibility matrix is updated
-- GUI/API support exists when applicable
-
----
-
-## Future Expansion After 1.0
-
-Not part of the initial OCPP 1.6 baseline, but potential later tracks include:
-
-- diagnostics and log upload depth
-- security extensions
-- richer firmware artifact models
-- ISO 15118-oriented behavior
-- Plug & Charge abstractions
-- hardware-in-the-loop
-- recorded trace replay
-- certification-focused scenario packs
+- Ship complete profiles, not partial message sets
+- The scenario DSL stays declarative and YAML-based in v1.x; no general scripting runtime
+- The single-binary model is maintained until there is a concrete operational reason to split
+- The internal component boundaries are maintained even before the split, so the eventual extraction is a refactor, not a rewrite
